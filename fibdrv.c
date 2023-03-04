@@ -1,3 +1,4 @@
+#include <linux/bitops.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/fs.h>
@@ -24,19 +25,31 @@ static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 
+/* Fibonacci Sequence using fast doubling */
 static long long fib_sequence(long long k)
 {
-    /* FIXME: C99 variable-length array (VLA) is not allowed in Linux kernel. */
-    long long f[k + 2];
+    if (k < 2)
+        return k;
 
-    f[0] = 0;
-    f[1] = 1;
+    long long fib[2] = {0, 1};
+    int len = fls64(k);
+    k <<= 64 - len;
 
-    for (int i = 2; i <= k; i++) {
-        f[i] = f[i - 1] + f[i - 2];
+    for (; len; len--, k <<= 1) {
+        /* Fast doubling */
+        long long tmp = fib[0];
+        fib[0] = fib[0] * (2 * fib[1] - fib[0]);
+        fib[1] = fib[1] * fib[1] + tmp * tmp;
+
+        if (k & (1ULL << 63)) {
+            /* Fast doubling + 1 */
+            tmp = fib[0];
+            fib[0] = fib[1];
+            fib[1] = fib[1] + tmp;
+        }
     }
 
-    return f[k];
+    return fib[0];
 }
 
 static int fib_open(struct inode *inode, struct file *file)
