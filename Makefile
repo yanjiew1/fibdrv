@@ -39,3 +39,6 @@ check: all
 	$(MAKE) unload
 	@diff -u out scripts/expected.txt && $(call pass)
 	@scripts/verify.py
+
+verify: check
+	@exit $$(scripts/verify.py | grep -c fail)
