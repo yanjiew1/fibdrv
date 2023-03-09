@@ -12,7 +12,7 @@ int main()
     long long sz;
 
     char buf[1];
-    char write_buf[] = "testing writing";
+    /* char write_buf[] = "testing writing"; */
     int offset = 100; /* TODO: try test something bigger than the limit */
 
     int fd = open(FIB_DEV, O_RDWR);
@@ -21,10 +21,12 @@ int main()
         exit(1);
     }
 
+#if 0
     for (int i = 0; i <= offset; i++) {
         sz = write(fd, write_buf, strlen(write_buf));
         printf("Writing to " FIB_DEV ", returned the sequence %lld\n", sz);
     }
+#endif
 
     for (int i = 0; i <= offset; i++) {
         lseek(fd, i, SEEK_SET);
