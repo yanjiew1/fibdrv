@@ -24,6 +24,7 @@ static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
+static ktime_t kt;
 
 /* Fibonacci Sequence using fast doubling */
 static long long fib_sequence(long long k)
@@ -73,7 +74,10 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    return (ssize_t) fib_sequence(*offset);
+    ktime_t start = ktime_get();
+    long long result = fib_sequence(*offset);
+    kt = ktime_sub(ktime_get(), start);
+    return (ssize_t) result;
 }
 
 /* write operation is skipped */
@@ -82,7 +86,7 @@ static ssize_t fib_write(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    return 1;
+    return kt;
 }
 
 static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
