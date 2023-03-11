@@ -16,7 +16,7 @@ void bn_add(struct bignum *c, struct bignum *a, struct bignum *b)
     }
 
     for (; i < b->size, i < c->capacity; i++) {
-        c->digits[i] = a->digits[i] + carry;
+        c->digits[i] = b->digits[i] + carry;
         carry = c->digits[i] < a->digits[i];
     }
 
@@ -47,7 +47,7 @@ void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
     }
 
     for (; i < b->size, i < c->capacity; i++) {
-        c->digits[i] = a->digits[i] - borrow;
+        c->digits[i] = b->digits[i] - borrow;
         borrow = c->digits[i] > a->digits[i];
     }
 
