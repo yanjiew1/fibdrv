@@ -96,3 +96,20 @@ void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
     while (c->size > 0 && c->digits[c->size - 1] == 0)
         c->size--;
 }
+
+void bn_lshift1(struct bignum *c)
+{
+    int i = c->size;
+
+    if (i >= c->capacity) {
+        i--;
+    }
+
+    for (; i >= 1; i--)
+        c->digits[i] = c->digits[i] << 1 | c->digits[i - 1] >> 63;
+
+    c->digits[0] = c->digits[0] << 1;
+
+    if (c->digits[c->size] != 0)
+        c->size++;
+}
