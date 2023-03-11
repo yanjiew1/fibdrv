@@ -101,9 +101,8 @@ void bn_lshift1(struct bignum *c)
 {
     int i = c->size;
 
-    if (i >= c->capacity) {
+    if (i >= c->capacity)
         i--;
-    }
 
     for (; i >= 1; i--)
         c->digits[i] = c->digits[i] << 1 | c->digits[i - 1] >> 63;
