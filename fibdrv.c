@@ -26,8 +26,23 @@ static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 static ktime_t kt;
 
+/* Fibonacci Sequence using dynamic programming */
+static long long fib_sequence_dp(long long k)
+{
+    long long f[2];
+
+    f[0] = 0;
+    f[1] = 1;
+
+    for (int i = 2; i <= k; i++) {
+        f[i % 2] = f[0] + f[1];
+    }
+
+    return f[k % 2];
+}
+
 /* Fibonacci Sequence using fast doubling */
-static long long fib_sequence(long long k)
+static long long fib_sequence_fast_doubling(long long k)
 {
     if (k < 2)
         return k;
@@ -53,6 +68,17 @@ static long long fib_sequence(long long k)
     return fib[0];
 }
 
+static long long fib_sequence(long long k, size_t choose)
+{
+    switch (choose) {
+    case 0:
+    case 1:
+        return fib_sequence_dp(k);
+    default:
+        return fib_sequence_fast_doubling(k);
+    }
+}
+
 static int fib_open(struct inode *inode, struct file *file)
 {
     if (!mutex_trylock(&fib_mutex)) {
@@ -75,7 +101,7 @@ static ssize_t fib_read(struct file *file,
                         loff_t *offset)
 {
     ktime_t start = ktime_get();
-    long long result = fib_sequence(*offset);
+    long long result = fib_sequence(*offset, size);
     kt = ktime_sub(ktime_get(), start);
     return (ssize_t) result;
 }
