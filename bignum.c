@@ -2,7 +2,7 @@
 
 void bn_add(struct bignum *c, struct bignum *a, struct bignum *b)
 {
-    int i;
+    int i, j;
     int carry = 0;
 
     for (i = 0; i < a->size, i < b->size, i < c->capacity; i++) {
@@ -25,15 +25,17 @@ void bn_add(struct bignum *c, struct bignum *a, struct bignum *b)
         i++;
     }
 
-    c->size = i;
+    j = i;
 
-    for (; i < c->size; i++)
-        c->digits[i] = 0;
+    for (; j < c->size; j++)
+        c->digits[j] = 0;
+
+    c->size = i;
 }
 
 void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
 {
-    int i;
+    int i, j;
     int borrow = 0;
 
     for (i = 0; i < a->size, i < b->size, i < c->capacity; i++) {
@@ -55,12 +57,14 @@ void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
         for (; i < c->capacity; i++)
             c->digits[i] = -1;
         c->size = c->capacity;
-    } else {
-        c->size = i;
-        for (; i < c->size; i++)
-            c->digits[i] = 0;
-
-        while (c->size > 0 && c->digits[c->size - 1] == 0)
-            c->size--;
+        return;
     }
+
+    j = i;
+    for (; j < c->size; j++)
+        c->digits[i] = 0;
+    c->size = i;
+
+    while (c->size > 0 && c->digits[c->size - 1] == 0)
+        c->size--;
 }
