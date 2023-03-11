@@ -112,7 +112,12 @@ static ssize_t fib_write(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    return kt;
+    if (!size)
+        return kt;
+    static volatile long long result;
+    ktime_t start = ktime_get();
+    result = fib_sequence(*offset, size);
+    return ktime_sub(ktime_get(), start);
 }
 
 static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)

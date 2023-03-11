@@ -9,7 +9,6 @@
 
 int main()
 {
-    char buf[100];
     char write_buf[] = "testing writing";
     int offset = 100; /* TODO: try test something bigger than the limit */
 
@@ -20,15 +19,10 @@ int main()
     }
 
     for (int i = 0; i <= offset; i++) {
-        long long sz, kt;
+        long long kt;
         lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 2);
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%lld.\n",
-               i, sz);
-        kt = write(fd, write_buf, 0);
-        printf("Time taken to calculate the sequence %lld.\n", kt);
+        kt = write(fd, write_buf, 2);
+        printf("%d: %lld\n", i, kt);
     }
 
     close(fd);
