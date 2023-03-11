@@ -53,13 +53,6 @@ void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
         borrow = c->digits[i] > a->digits[i];
     }
 
-    if (borrow) {
-        for (; i < c->capacity; i++)
-            c->digits[i] = -1;
-        c->size = c->capacity;
-        return;
-    }
-
     j = i;
     for (; j < c->size; j++)
         c->digits[i] = 0;
