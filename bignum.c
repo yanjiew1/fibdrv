@@ -25,7 +25,7 @@ void bn_add(struct bignum *c, struct bignum *a, struct bignum *b)
         i++;
     }
 
-    for (; i < c->capacity; i++)
+    for (; i < c->size; i++)
         c->digits[i] = 0;
 
     c->size = i;
