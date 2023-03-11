@@ -26,6 +26,13 @@ static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 static ktime_t kt;
 
+static int fib_num_of_u64(int k)
+{
+    int digits = ((long) k * 1084753 - 18140062) / (10 * 9) + 1;
+    digits = digits < 1 ? 1 : digits;
+    return digits;
+}
+
 /* Fibonacci Sequence using dynamic programming */
 static long long fib_sequence_dp(long long k)
 {
@@ -67,6 +74,8 @@ static long long fib_sequence_fast_doubling(long long k)
 
     return fib[0];
 }
+
+/* Fibonacci Sequence using big number */
 
 static long long fib_sequence(long long k, size_t choose)
 {
