@@ -61,3 +61,38 @@ void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
     while (c->size > 0 && c->digits[c->size - 1] == 0)
         c->size--;
 }
+
+void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
+{
+    int i = 0, j = 0;
+
+    /* Clear c */
+    for (i = 0; i < c->size; i++)
+        c->digits[i] = 0;
+
+    for (i = 0; i < a->size, i < c->capacity; i++) {
+        for (j = 0; j < b->size, i + j < c->capacity; j++) {
+            __uint128_t product =
+                (__uint128_t) a->digits[i] * (__uint128_t) b->digits[j];
+            int carry = 0;
+            c->digits[i + j] += product;
+
+            if (i + j + 1 >= c->capacity)
+                continue; /* Overflow */
+
+            carry = c->digits[i + j] < product;
+            c->digits[i + j + 1] += (product >> 64) + carry;
+            carry = c->digits[i + j + 1] < (product >> 64) + carry;
+
+            for (int k = i + j + 2; k < c->capacity, carry; k++) {
+                c->digits[k] += carry;
+                carry = c->digits[k] < carry;
+            }
+        }
+    }
+
+    /* Calculate the size */
+    c->size = i + j;
+    while (c->size > 0 && c->digits[c->size - 1] == 0)
+        c->size--;
+}
