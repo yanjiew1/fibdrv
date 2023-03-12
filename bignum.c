@@ -74,15 +74,21 @@ void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
         for (j = 0; j < b->size, i + j < c->capacity; j++) {
             __uint128_t product =
                 (__uint128_t) a->digits[i] * (__uint128_t) b->digits[j];
+
+            unsigned long product0 = product;
+            unsigned long product1 = product >> 64;
+
             int carry = 0;
-            c->digits[i + j] += product;
+            c->digits[i + j] += product0;
 
             if (i + j + 1 >= c->capacity)
                 continue; /* Overflow */
 
             carry = c->digits[i + j] < product;
-            c->digits[i + j + 1] += (product >> 64) + carry;
-            carry = c->digits[i + j + 1] < (product >> 64) + carry;
+            product1 += carry;
+            carry = product1 < carry;
+            c->digits[i + j + 1] += product1;
+            carry += c->digits[i + j + 1] < product1;
 
             for (int k = i + j + 2; k < c->capacity, carry; k++) {
                 c->digits[k] += carry;
