@@ -64,7 +64,7 @@ void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
 
 void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
 {
-    int i = 0, j = 0;
+    int i, j;
 
     /* Clear c */
     for (i = 0; i < c->size; i++)
@@ -98,7 +98,10 @@ void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
     }
 
     /* Calculate the size */
-    c->size = i + j;
+    c->size = a->size + b->size;
+    if (c->size > c->capacity)
+        c->size = c->capacity;
+
     while (c->size > 0 && c->digits[c->size - 1] == 0)
         c->size--;
 }
