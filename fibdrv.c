@@ -37,10 +37,10 @@ struct fibdrv_priv {
     ktime_t end;
 };
 
-static int fib_num_of_u64(unsigned int k)
+static int fib_num_of_bits(int k)
 {
-    int digits = ((long) k * 1084753 - 18140062) / (10 * 9) + 1;
-    digits = digits < 1 ? 1 : digits;
+    int digits = ((long) k * 694242 - 1160964) / (10 * 6) + 1;
+    digits = digits < 2 ? 1 : digits;
     return digits;
 }
 
