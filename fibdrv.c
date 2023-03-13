@@ -71,7 +71,9 @@ static int fib_sequence_fast_doubling(unsigned int k, struct fibdrv_priv *priv)
 {
     long long fib[2] = {0, 1};
     int len = fls(k);
-    k <<= 32 - len;
+
+    if (len > 0 && len < 32)
+        k <<= 32 - len;
 
     for (; len; len--, k <<= 1) {
         /* Fast doubling */
