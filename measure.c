@@ -9,7 +9,7 @@
 
 int main()
 {
-    char write_buf[] = "testing writing";
+    char buf[] = "testing";
     int offset = 100; /* TODO: try test something bigger than the limit */
 
     int fd = open(FIB_DEV, O_RDWR);
@@ -21,7 +21,8 @@ int main()
     for (int i = 0; i <= offset; i++) {
         long long kt;
         lseek(fd, i, SEEK_SET);
-        kt = write(fd, write_buf, 2);
+        read(fd, buf, 0);
+        kt = write(fd, buf, 1) - write(fd, buf, 0);
         printf("%d: %lld\n", i, kt);
     }
 

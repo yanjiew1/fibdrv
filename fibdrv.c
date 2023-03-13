@@ -7,6 +7,9 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/slab.h>
+#include <linux/string.h>
+#include <linux/uaccess.h>
 
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
@@ -24,9 +27,18 @@ static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
-static ktime_t kt;
 
-static int fib_num_of_u64(int k)
+struct fibdrv_priv {
+    size_t size;
+    size_t pos;
+    char *result;
+    int impl;
+    struct mutex lock;
+    ktime_t start;
+    ktime_t end;
+};
+
+static int fib_num_of_u64(unsigned int k)
 {
     int digits = ((long) k * 1084753 - 18140062) / (10 * 9) + 1;
     digits = digits < 1 ? 1 : digits;
@@ -34,7 +46,7 @@ static int fib_num_of_u64(int k)
 }
 
 /* Fibonacci Sequence using dynamic programming */
-static long long fib_sequence_dp(long long k)
+static int fib_sequence_dp(unsigned int k, struct fibdrv_priv *priv)
 {
     long long f[2];
 
@@ -45,18 +57,22 @@ static long long fib_sequence_dp(long long k)
         f[i % 2] = f[0] + f[1];
     }
 
-    return f[k % 2];
+    priv->result = kmalloc(sizeof(long long), GFP_KERNEL);
+    if (!priv->result)
+        return -ENOMEM;
+
+    priv->size = sizeof(long long);
+    memcpy(priv->result, &f[k % 2], sizeof(long long));
+
+    return 0;
 }
 
 /* Fibonacci Sequence using fast doubling */
-static long long fib_sequence_fast_doubling(long long k)
+static int fib_sequence_fast_doubling(unsigned int k, struct fibdrv_priv *priv)
 {
-    if (k < 2)
-        return k;
-
     long long fib[2] = {0, 1};
-    int len = fls64(k);
-    k <<= 64 - len;
+    int len = fls(k);
+    k <<= 32 - len;
 
     for (; len; len--, k <<= 1) {
         /* Fast doubling */
@@ -64,7 +80,7 @@ static long long fib_sequence_fast_doubling(long long k)
         fib[0] = fib[0] * (2 * fib[1] - fib[0]);
         fib[1] = fib[1] * fib[1] + tmp * tmp;
 
-        if (k & (1ULL << 63)) {
+        if (k & (1U << 31)) {
             /* Fast doubling + 1 */
             tmp = fib[0];
             fib[0] = fib[1];
@@ -72,34 +88,60 @@ static long long fib_sequence_fast_doubling(long long k)
         }
     }
 
-    return fib[0];
+    priv->result = kmalloc(sizeof(long long), GFP_KERNEL);
+    if (!priv->result)
+        return -ENOMEM;
+
+    priv->size = sizeof(long long);
+    memcpy(priv->result, &fib[0], sizeof(long long));
+
+    return 0;
 }
 
 /* Fibonacci Sequence using big number */
-
-static long long fib_sequence(long long k, size_t choose)
+static long long fib_sequence(int k, struct fibdrv_priv *priv)
 {
-    switch (choose) {
-    case 0:
-    case 1:
-        return fib_sequence_dp(k);
+    switch (priv->impl) {
+    case 2:
+        return fib_sequence_dp(k, priv);
     default:
-        return fib_sequence_fast_doubling(k);
+        return fib_sequence_fast_doubling(k, priv);
     }
+}
+
+static void fib_init_priv(struct fibdrv_priv *priv)
+{
+    priv->size = 0;
+    priv->result = NULL;
+    priv->impl = 0;
+    priv->start = 0;
+    priv->end = 0;
+    mutex_init(&priv->lock);
+}
+
+static void fib_free_priv(struct fibdrv_priv *priv)
+{
+    if (priv->result)
+        kfree(priv->result);
+    mutex_destroy(&priv->lock);
+    kfree(priv);
 }
 
 static int fib_open(struct inode *inode, struct file *file)
 {
-    if (!mutex_trylock(&fib_mutex)) {
-        printk(KERN_ALERT "fibdrv is in use");
-        return -EBUSY;
+    struct fibdrv_priv *priv = kmalloc(sizeof(struct fibdrv_priv), GFP_KERNEL);
+    if (!priv) {
+        printk(KERN_ALERT "kmalloc failed");
+        return -ENOMEM;
     }
+    fib_init_priv(priv);
+    file->private_data = priv;
     return 0;
 }
 
 static int fib_release(struct inode *inode, struct file *file)
 {
-    mutex_unlock(&fib_mutex);
+    fib_free_priv((struct fibdrv_priv *) file->private_data);
     return 0;
 }
 
@@ -109,10 +151,43 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    ktime_t start = ktime_get();
-    long long result = fib_sequence(*offset, size);
-    kt = ktime_sub(ktime_get(), start);
-    return (ssize_t) result;
+    struct fibdrv_priv *priv = (struct fibdrv_priv *) file->private_data;
+    ssize_t ret = 0;
+
+    mutex_lock(&priv->lock);
+
+    /* Whether we need to calculate new value */
+    if (!priv->result) {
+        ktime_t start, end;
+        start = ktime_get();
+        fib_sequence((int) *offset, priv);
+        end = ktime_get();
+        priv->start = start;
+        priv->end = end;
+    }
+
+    if (size) {
+        /* Copy to user */
+        char *bufread = priv->result + priv->pos;
+        int release = 0;
+        if (priv->size - priv->pos < size) {
+            release = 1;
+            size = priv->size - priv->pos;
+        }
+        ret = size;
+
+        if (copy_to_user(buf, bufread, size) != size)
+            ret = -EFAULT;
+        else
+            priv->pos += size;
+
+        if (release) {
+            kfree(priv->result);
+            priv->result = NULL;
+        }
+    }
+    mutex_unlock(&priv->lock);
+    return ret;
 }
 
 /* write operation is skipped */
@@ -121,17 +196,33 @@ static ssize_t fib_write(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    if (!size)
-        return kt;
-    static volatile long long result;
-    ktime_t start = ktime_get();
-    result = fib_sequence(*offset, size);
-    return ktime_sub(ktime_get(), start);
+    struct fibdrv_priv *priv = (struct fibdrv_priv *) file->private_data;
+    ssize_t ret = 0;
+    mutex_lock(&priv->lock);
+    switch (size) {
+    case 0:
+        ret = priv->start;
+        break;
+    case 1:
+        ret = priv->end;
+        break;
+    default:
+        priv->impl = (int) size;
+    }
+    mutex_unlock(&priv->lock);
+    return ret;
 }
 
 static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
 {
+    struct fibdrv_priv *priv = (struct fibdrv_priv *) file->private_data;
     loff_t new_pos = 0;
+    mutex_lock(&priv->lock);
+    if (priv->result) {
+        kfree(priv->result);
+        priv->result = NULL;
+    }
+
     switch (orig) {
     case 0: /* SEEK_SET: */
         new_pos = offset;
@@ -149,6 +240,7 @@ static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
     if (new_pos < 0)
         new_pos = 0;        // min case
     file->f_pos = new_pos;  // This is what we'll use now
+    mutex_unlock(&priv->lock);
     return new_pos;
 }
 
@@ -164,8 +256,6 @@ const struct file_operations fib_fops = {
 static int __init init_fib_dev(void)
 {
     int rc = 0;
-
-    mutex_init(&fib_mutex);
 
     // Let's register the device
     // This will dynamically allocate the major number
@@ -218,7 +308,6 @@ failed_cdev:
 
 static void __exit exit_fib_dev(void)
 {
-    mutex_destroy(&fib_mutex);
     device_destroy(fib_class, fib_dev);
     class_destroy(fib_class);
     cdev_del(fib_cdev);

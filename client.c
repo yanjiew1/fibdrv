@@ -9,9 +9,8 @@
 
 int main()
 {
-    long long sz;
+    long long res;
 
-    char buf[100];
     /* char write_buf[] = "testing writing"; */
     int offset = 100; /* TODO: try test something bigger than the limit */
 
@@ -30,20 +29,20 @@ int main()
 
     for (int i = 0; i <= offset; i++) {
         lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 2);
+        read(fd, &res, sizeof(res));
         printf("Reading from " FIB_DEV
                " at offset %d, returned the sequence "
                "%lld.\n",
-               i, sz);
+               i, res);
     }
 
     for (int i = offset; i >= 0; i--) {
         lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 2);
+        read(fd, &res, sizeof(res));
         printf("Reading from " FIB_DEV
                " at offset %d, returned the sequence "
                "%lld.\n",
-               i, sz);
+               i, res);
     }
 
     close(fd);
