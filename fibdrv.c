@@ -120,8 +120,7 @@ static void fib_init_priv(struct fibdrv_priv *priv)
 
 static void fib_free_priv(struct fibdrv_priv *priv)
 {
-    if (priv->result)
-        kfree(priv->result);
+    kfree(priv->result);
     mutex_destroy(&priv->lock);
     kfree(priv);
 }
@@ -217,10 +216,8 @@ static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
     struct fibdrv_priv *priv = (struct fibdrv_priv *) file->private_data;
     loff_t new_pos = 0;
     mutex_lock(&priv->lock);
-    if (priv->result) {
-        kfree(priv->result);
-        priv->result = NULL;
-    }
+    kfree(priv->result);
+    priv->result = NULL;
 
     switch (orig) {
     case 0: /* SEEK_SET: */
