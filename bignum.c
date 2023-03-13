@@ -1,4 +1,5 @@
 #include "bignum.h"
+#include <linux/slab.h>  // kmalloc()
 
 void bn_add(struct bignum *c, struct bignum *a, struct bignum *b)
 {
@@ -120,4 +121,34 @@ void bn_lshift1(struct bignum *c)
 
     if (c->digits[j] != 0)
         c->size++;
+}
+
+int bn_init(struct bignum *bn, int capacity)
+{
+    bn->capacity = capacity;
+    bn->size = 0;
+    bn->digits = kmalloc(capacity * sizeof(unsigned long), GFP_KERNEL);
+
+    if (bn->digits == NULL)
+        return -ENOMEM;
+
+    return 0;
+}
+
+void bn_free(struct bignum *bn)
+{
+    kfree(bn->digits);
+}
+
+void bn_set(struct bignum *c, struct bignum *a)
+{
+    int i;
+
+    for (i = 0; i < a->size, i < c->capacity; i++)
+        c->digits[i] = a->digits[i];
+
+    for (; i < c->size; i++)
+        c->digits[i] = 0;
+
+    c->size = a->size;
 }
