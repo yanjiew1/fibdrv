@@ -170,6 +170,9 @@ static ssize_t fib_read(struct file *file,
         char *bufread = priv->result + priv->pos;
         int release = 0;
         if (priv->size - priv->pos < size) {
+            /* The returned data is less than the data copied.
+             * The user space program should know that it read all the data.
+             */
             release = 1;
             size = priv->size - priv->pos;
         }
@@ -181,6 +184,7 @@ static ssize_t fib_read(struct file *file,
             priv->pos += size;
 
         if (release) {
+            /* Discard the result */
             kfree(priv->result);
             priv->result = NULL;
         }
@@ -198,16 +202,12 @@ static ssize_t fib_write(struct file *file,
     struct fibdrv_priv *priv = (struct fibdrv_priv *) file->private_data;
     ssize_t ret = 0;
     mutex_lock(&priv->lock);
-    switch (size) {
-    case 0:
+    if (size == 0)
         ret = priv->start;
-        break;
-    case 1:
+    else if (size == 1)
         ret = priv->end;
-        break;
-    default:
+    else
         priv->impl = (int) size;
-    }
     mutex_unlock(&priv->lock);
     return ret;
 }
