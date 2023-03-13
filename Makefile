@@ -18,7 +18,7 @@ $(GIT_HOOKS):
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
-	$(RM) client out
+	$(RM) client out measure
 load:
 	sudo insmod $(TARGET_MODULE).ko
 unload:
