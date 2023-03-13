@@ -26,7 +26,6 @@ MODULE_VERSION("0.1");
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
-static DEFINE_MUTEX(fib_mutex);
 
 struct fibdrv_priv {
     size_t size;
