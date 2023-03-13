@@ -152,3 +152,12 @@ void bn_set(struct bignum *c, struct bignum *a)
 
     c->size = a->size;
 }
+
+void bn_swap(struct bignum *a, struct bignum *b)
+{
+    struct bignum tmp;
+
+    tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
