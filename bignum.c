@@ -1,22 +1,22 @@
 #include "bignum.h"
-#include <linux/slab.h>  // kmalloc()
+#include <linux/slab.h>
 
 void bn_add(struct bignum *c, struct bignum *a, struct bignum *b)
 {
     int i, j;
     int carry = 0;
 
-    for (i = 0; i < a->size, i < b->size, i < c->capacity; i++) {
+    for (i = 0; i < a->size && i < b->size && i < c->capacity; i++) {
         c->digits[i] = a->digits[i] + b->digits[i] + carry;
         carry = c->digits[i] < a->digits[i];
     }
 
-    for (; i < a->size, i < c->capacity; i++) {
+    for (; i < a->size && i < c->capacity; i++) {
         c->digits[i] = a->digits[i] + carry;
         carry = c->digits[i] < a->digits[i];
     }
 
-    for (; i < b->size, i < c->capacity; i++) {
+    for (; i < b->size && i < c->capacity; i++) {
         c->digits[i] = b->digits[i] + carry;
         carry = c->digits[i] < a->digits[i];
     }
@@ -39,17 +39,17 @@ void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
     int i, j;
     int borrow = 0;
 
-    for (i = 0; i < a->size, i < b->size, i < c->capacity; i++) {
+    for (i = 0; i < a->size && i < b->size && i < c->capacity; i++) {
         c->digits[i] = a->digits[i] - b->digits[i] - borrow;
         borrow = c->digits[i] > a->digits[i];
     }
 
-    for (; i < a->size, i < c->capacity; i++) {
+    for (; i < a->size && i < c->capacity; i++) {
         c->digits[i] = a->digits[i] - borrow;
         borrow = c->digits[i] > a->digits[i];
     }
 
-    for (; i < b->size, i < c->capacity; i++) {
+    for (; i < b->size && i < c->capacity; i++) {
         c->digits[i] = b->digits[i] - borrow;
         borrow = c->digits[i] > a->digits[i];
     }
@@ -71,8 +71,8 @@ void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
     for (i = 0; i < c->size; i++)
         c->digits[i] = 0;
 
-    for (i = 0; i < a->size, i < c->capacity; i++) {
-        for (j = 0; j < b->size, i + j < c->capacity; j++) {
+    for (i = 0; i < a->size && i < c->capacity; i++) {
+        for (j = 0; j < b->size && i + j < c->capacity; j++) {
             __uint128_t product =
                 (__uint128_t) a->digits[i] * (__uint128_t) b->digits[j];
 
@@ -91,7 +91,7 @@ void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
             c->digits[i + j + 1] += product1;
             carry += c->digits[i + j + 1] < product1;
 
-            for (int k = i + j + 2; k < c->capacity, carry; k++) {
+            for (int k = i + j + 2; k < c->capacity && carry; k++) {
                 c->digits[k] += carry;
                 carry = c->digits[k] < carry;
             }
@@ -144,7 +144,7 @@ void bn_set(struct bignum *c, struct bignum *a)
 {
     int i;
 
-    for (i = 0; i < a->size, i < c->capacity; i++)
+    for (i = 0; i < a->size && i < c->capacity; i++)
         c->digits[i] = a->digits[i];
 
     for (; i < c->size; i++)
