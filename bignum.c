@@ -140,6 +140,16 @@ void bn_free(struct bignum *bn)
     kfree(bn->digits);
 }
 
+void bn_set_ul(struct bignum *c, unsigned long a)
+{
+    /* clean */
+    for (int i = 0; i < c->size; i++)
+        c->digits[i] = 0;
+
+    c->digits[0] = a;
+    c->size = 1;
+}
+
 void bn_set(struct bignum *c, struct bignum *a)
 {
     int i;
