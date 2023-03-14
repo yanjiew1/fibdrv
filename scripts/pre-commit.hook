@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 CPPCHECK_unmatched=
-for f in *.c; do
+for f in src/*.c; do
     CPPCHECK_unmatched="$CPPCHECK_unmatched --suppress=unmatchedSuppression:$f"
 done
 
 CPPCHECK_suppresses=" \
 --suppress=missingIncludeSystem \
---suppress=noValidConfiguration:fibdrv.c \
---suppress=unusedFunction:fibdrv.c \
---suppress=unusedFunction:bignum.c \
+--suppress=noValidConfiguration:src/fibdrv.c \
+--suppress=unusedFunction:src/fibdrv.c \
+--suppress=unusedFunction:src/bignum.c \
 "
 CPPCHECK_OPTS="-I. --enable=all --error-exitcode=1 --force $CPPCHECK_suppresses $CPPCHECK_unmatched ."
 

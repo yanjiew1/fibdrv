@@ -11,6 +11,8 @@
 #include <linux/string.h>
 #include <linux/uaccess.h>
 
+#include "bignum.h"
+
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
 MODULE_DESCRIPTION("Fibonacci engine driver");
@@ -99,14 +101,77 @@ static int fib_sequence_fast_doubling(unsigned int k, struct fibdrv_priv *priv)
     return 0;
 }
 
+static int fib_sequence_bignum_fast_doubling(unsigned k,
+                                             struct fibdrv_priv *priv)
+{
+    int len = fls(k);
+    int bits = fib_num_of_bits(k);
+    int nlong = bits / BITS_PER_LONG + 1;
+    int ret = 0;
+
+    if (len > 0 && len < 32)
+        k <<= 32 - len;
+
+    struct bignum f0, f1, tmp0, tmp1, tmp2;
+    bn_init(&f0, nlong);
+    bn_init(&f1, nlong);
+    bn_init(&tmp0, nlong);
+    bn_init(&tmp1, nlong);
+    bn_init(&tmp2, nlong);
+
+    bn_set_ul(&f0, 0);
+    bn_set_ul(&f1, 1);
+
+    for (; len; len--, k <<= 1) {
+        /* Fast doubling */
+        bn_lshift1(&tmp0, &f1);
+        bn_sub(&tmp1, &tmp0, &f0);
+        bn_mul(&tmp0, &f0, &tmp1);
+
+        bn_mul(&tmp1, &f0, &f0);
+        bn_mul(&tmp2, &f1, &f1);
+
+        bn_add(&f1, &tmp1, &tmp2);
+        bn_swap(&f0, &tmp0);
+
+        if (k & (1U << 31)) {
+            /* Fast doubling + 1 */
+            bn_add(&tmp0, &f0, &f1);
+            bn_swap(&f0, &f1);
+            bn_swap(&f1, &tmp0);
+        }
+    }
+
+    /* Save the result */
+    priv->result = kmalloc(f0.size * sizeof(unsigned long), GFP_KERNEL);
+    if (!priv->result) {
+        ret = -ENOMEM;
+        goto err;
+    }
+
+    priv->size = f0.size * sizeof(unsigned long);
+    memcpy(priv->result, f0.digits, priv->size);
+
+err:
+    bn_free(&f0);
+    bn_free(&f1);
+    bn_free(&tmp0);
+    bn_free(&tmp1);
+    bn_free(&tmp2);
+
+    return ret;
+}
+
 /* Fibonacci Sequence using big number */
 static long long fib_sequence(int k, struct fibdrv_priv *priv)
 {
     switch (priv->impl) {
     case 2:
         return fib_sequence_dp(k, priv);
-    default:
+    case 3:
         return fib_sequence_fast_doubling(k, priv);
+    default:
+        return fib_sequence_bignum_fast_doubling(k, priv);
     }
 }
 

@@ -7,18 +7,23 @@ void bn_add(struct bignum *c, struct bignum *a, struct bignum *b)
     int carry = 0;
 
     for (i = 0; i < a->size && i < b->size && i < c->capacity; i++) {
-        c->digits[i] = a->digits[i] + b->digits[i] + carry;
+        c->digits[i] = carry;
+        c->digits[i] += a->digits[i];
         carry = c->digits[i] < a->digits[i];
+        c->digits[i] += b->digits[i];
+        carry += c->digits[i] < b->digits[i];
     }
 
     for (; i < a->size && i < c->capacity; i++) {
-        c->digits[i] = a->digits[i] + carry;
+        c->digits[i] = carry;
+        c->digits[i] += a->digits[i];
         carry = c->digits[i] < a->digits[i];
     }
 
     for (; i < b->size && i < c->capacity; i++) {
-        c->digits[i] = b->digits[i] + carry;
-        carry = c->digits[i] < a->digits[i];
+        c->digits[i] = carry;
+        c->digits[i] += b->digits[i];
+        carry = c->digits[i] < b->digits[i];
     }
 
     if (i < c->capacity && carry) {
@@ -51,7 +56,7 @@ void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b)
 
     for (; i < b->size && i < c->capacity; i++) {
         c->digits[i] = b->digits[i] - borrow;
-        borrow = c->digits[i] > a->digits[i];
+        borrow = c->digits[i] > b->digits[i];
     }
 
     j = i;
@@ -85,7 +90,7 @@ void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
             if (i + j + 1 >= c->capacity)
                 continue; /* Overflow */
 
-            carry = c->digits[i + j] < product;
+            carry = c->digits[i + j] < product0;
             product1 += carry;
             carry = product1 < carry;
             c->digits[i + j + 1] += product1;
@@ -119,8 +124,10 @@ void bn_lshift1(struct bignum *c, struct bignum *a)
         c->digits[i] = a->digits[i] << 1 | a->digits[i - 1] >> 63;
     c->digits[0] = a->digits[0] << 1;
 
-    if (c->digits[j] != 0)
-        c->size++;
+    if (c->digits[j] == 0)
+        c->size = j;
+    else
+        c->size = j + 1;
 }
 
 int bn_init(struct bignum *bn, int capacity)
