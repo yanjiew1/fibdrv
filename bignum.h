@@ -10,7 +10,7 @@ struct bignum {
 void bn_add(struct bignum *c, struct bignum *a, struct bignum *b);
 void bn_sub(struct bignum *c, struct bignum *a, struct bignum *b);
 void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b);
-void bn_lshift1(struct bignum *c);
+void bn_lshift1(struct bignum *c, struct bignum *a);
 
 int bn_init(struct bignum *bn, int capacity);
 void bn_free(struct bignum *bn);

@@ -107,17 +107,17 @@ void bn_mul(struct bignum *c, struct bignum *a, struct bignum *b)
         c->size--;
 }
 
-void bn_lshift1(struct bignum *c)
+void bn_lshift1(struct bignum *c, struct bignum *a)
 {
-    int i = c->size;
+    int i = a->size;
 
     if (i >= c->capacity)
-        i--;
+        i = c->capacity - 1;
     int j = i;
 
     for (; i >= 1; i--)
-        c->digits[i] = c->digits[i] << 1 | c->digits[i - 1] >> 63;
-    c->digits[0] = c->digits[0] << 1;
+        c->digits[i] = a->digits[i] << 1 | a->digits[i - 1] >> 63;
+    c->digits[0] = a->digits[0] << 1;
 
     if (c->digits[j] != 0)
         c->size++;
