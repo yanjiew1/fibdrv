@@ -5,20 +5,49 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "bnstr.h"
+
 #define FIB_DEV "/dev/fibonacci"
 
-int main()
+static void read_number(int fd, int k)
 {
-    long long res;
+    uint64_t res[15];
+    char str[301];
+    ssize_t sz;
+    lseek(fd, k, SEEK_SET);
+    sz = read(fd, &res, sizeof(res));
 
-    /* char write_buf[] = "testing writing"; */
-    int offset = 100; /* TODO: try test something bigger than the limit */
+    if (sz < 0) {
+        perror("Failed to read from character device");
+        return;
+    }
+
+    sz /= sizeof(uint64_t);
+    bn_to_str(str, res, sz);
+    printf("Reading from " FIB_DEV
+           " at offset %d, returned the sequence "
+           "%s.\n",
+           k, str);
+}
+
+int main(int argc, char **argv)
+{
+    unsigned long res[100];
+
+    int offset = 1000;
 
     int fd = open(FIB_DEV, O_RDWR);
     if (fd < 0) {
         perror("Failed to open character device");
         exit(1);
     }
+
+    /* Choose implementation */
+    int impl = 4;
+    if (argc > 1)
+        impl = atoi(argv[1]);
+
+    write(fd, res, impl);
 
 #if 0
     for (int i = 0; i <= offset; i++) {
@@ -27,23 +56,11 @@ int main()
     }
 #endif
 
-    for (int i = 0; i <= offset; i++) {
-        lseek(fd, i, SEEK_SET);
-        read(fd, &res, sizeof(res));
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%lld.\n",
-               i, res);
-    }
+    for (int i = 0; i <= offset; i++)
+        read_number(fd, i);
 
-    for (int i = offset; i >= 0; i--) {
-        lseek(fd, i, SEEK_SET);
-        read(fd, &res, sizeof(res));
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%lld.\n",
-               i, res);
-    }
+    for (int i = offset; i >= 0; i--)
+        read_number(fd, i);
 
     close(fd);
     return 0;

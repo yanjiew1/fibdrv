@@ -23,7 +23,7 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 92
+#define MAX_LENGTH 1000
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
@@ -41,9 +41,9 @@ struct fibdrv_priv {
 
 static int fib_num_of_bits(int k)
 {
-    int digits = ((long) k * 694242 - 1160964) / (10 * 6) + 1;
-    digits = digits < 2 ? 1 : digits;
-    return digits;
+    int bits = ((long) k * 694242 - 1160964) / (10 * 6) + 1;
+    bits = bits < 2 ? 1 : bits;
+    return bits;
 }
 
 /* Fibonacci Sequence using dynamic programming */
@@ -101,6 +101,48 @@ static int fib_sequence_fast_doubling(unsigned int k, struct fibdrv_priv *priv)
     return 0;
 }
 
+static int fib_sequence_bignum_dp(unsigned k, struct fibdrv_priv *priv)
+{
+    struct bignum f[2], tmp;
+    int bits = fib_num_of_bits(k);
+    int nlong = bits / BITS_PER_LONG + 1;
+    int ret = 0;
+
+    bn_init(&f[0], nlong);
+    bn_init(&f[1], nlong);
+    bn_init(&tmp, nlong);
+
+    bn_set_ul(&f[0], 0);
+    bn_set_ul(&f[1], 1);
+
+    for (int i = 2; i <= k; i++) {
+        bn_add(&tmp, &f[0], &f[1]);
+        bn_swap(&tmp, &f[i % 2]);
+    }
+
+    /* Save the result */
+    struct bignum *res = &f[k % 2];
+
+    if (res->size == 0)
+        res->size = 1;
+
+    priv->result = kmalloc(res->size * sizeof(unsigned long), GFP_KERNEL);
+    if (!priv->result) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    priv->size = res->size * sizeof(unsigned long);
+    memcpy(priv->result, res->digits, priv->size);
+
+out:
+    bn_free(&f[0]);
+    bn_free(&f[1]);
+    bn_free(&tmp);
+
+    return ret;
+}
+
 static int fib_sequence_bignum_fast_doubling(unsigned k,
                                              struct fibdrv_priv *priv)
 {
@@ -143,16 +185,19 @@ static int fib_sequence_bignum_fast_doubling(unsigned k,
     }
 
     /* Save the result */
+    if (f0.size == 0)
+        f0.size = 1;
+
     priv->result = kmalloc(f0.size * sizeof(unsigned long), GFP_KERNEL);
     if (!priv->result) {
         ret = -ENOMEM;
-        goto err;
+        goto out;
     }
 
     priv->size = f0.size * sizeof(unsigned long);
     memcpy(priv->result, f0.digits, priv->size);
 
-err:
+out:
     bn_free(&f0);
     bn_free(&f1);
     bn_free(&tmp0);
@@ -170,6 +215,8 @@ static long long fib_sequence(int k, struct fibdrv_priv *priv)
         return fib_sequence_dp(k, priv);
     case 3:
         return fib_sequence_fast_doubling(k, priv);
+    case 4:
+        return fib_sequence_bignum_dp(k, priv);
     default:
         return fib_sequence_bignum_fast_doubling(k, priv);
     }
@@ -178,6 +225,7 @@ static long long fib_sequence(int k, struct fibdrv_priv *priv)
 static void fib_init_priv(struct fibdrv_priv *priv)
 {
     priv->size = 0;
+    priv->pos = 0;
     priv->result = NULL;
     priv->impl = 0;
     priv->start = 0;
@@ -229,9 +277,10 @@ static ssize_t fib_read(struct file *file,
         end = ktime_get();
         priv->start = start;
         priv->end = end;
+        priv->pos = 0;
     }
 
-    if (size) {
+    if (size && priv->result) {
         /* Copy to user */
         char *bufread = priv->result + priv->pos;
         int release = 0;
@@ -244,7 +293,7 @@ static ssize_t fib_read(struct file *file,
         }
         ret = size;
 
-        if (copy_to_user(buf, bufread, size) != size)
+        if (copy_to_user(buf, bufread, size) != 0)
             ret = -EFAULT;
         else
             priv->pos += size;
