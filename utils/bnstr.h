@@ -57,11 +57,10 @@ static char *bn_to_str(char *buf, uint64_t *bn, int nlimbs)
         for (int i = 0; i < 19; i++) {
             *p++ = '0' + tmp % 10;
             tmp /= 10;
+            if (!tmp && !qlimbs)
+                break;
         }
     }
-
-    while (p - buf > 1 && *(p - 1) == '0')
-        p--;
 
     /* swap buffer */
     size_t bufsize = p - buf;
