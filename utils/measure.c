@@ -3,14 +3,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #define FIB_DEV "/dev/fibonacci"
 
-int main()
+long get_nanosecond()
 {
-    char buf[] = "testing";
-    int offset = 100; /* TODO: try test something bigger than the limit */
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+int main(int argc, char *argv[])
+{
+    char buf[300];
+    int offset = 1000;
+    int impl = 4;
 
     int fd = open(FIB_DEV, O_RDWR);
     if (fd < 0) {
@@ -18,12 +27,20 @@ int main()
         exit(1);
     }
 
+    if (argc > 1)
+        impl = atoi(argv[1]);
+
+    /* Change implementation */
+    write(fd, buf, impl);
+
     for (int i = 0; i <= offset; i++) {
-        long long kt;
+        long start, ktime, utime;
         lseek(fd, i, SEEK_SET);
-        read(fd, buf, 0);
-        kt = write(fd, buf, 1) - write(fd, buf, 0);
-        printf("%d: %lld\n", i, kt);
+        start = get_nanosecond();
+        read(fd, buf, 300);
+        utime = get_nanosecond() - start;
+        ktime = write(fd, buf, 1) - write(fd, buf, 0);
+        printf("%d %ld %ld %ld\n", i, ktime, utime, utime - ktime);
     }
 
     close(fd);
