@@ -33,8 +33,21 @@ int main(int argc, char *argv[])
     /* Change implementation */
     write(fd, buf, impl);
 
+    /* Discard the first round measurement */
+    for (int i = 0; i <= offset; i++) {
+        lseek(fd, i, SEEK_SET);
+        read(fd, buf, 300);
+        get_nanosecond();
+    }
+
     for (int i = 0; i <= offset; i++) {
         long start, ktime, utime;
+
+        /* Perform the operation without measurement to avoid cache misses */
+        get_nanosecond();
+        lseek(fd, i, SEEK_SET);
+        read(fd, buf, 300);
+
         lseek(fd, i, SEEK_SET);
         start = get_nanosecond();
         read(fd, buf, 300);

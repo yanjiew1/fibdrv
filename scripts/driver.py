@@ -26,7 +26,7 @@ def data_processing(data_set, n):
 if __name__ == "__main__":
     Ys = []
     for i in range(runs):
-        comp_proc = subprocess.run('sudo ./measure > data.txt', shell = True)
+        comp_proc = subprocess.run('sudo ./measure 4 > data.txt', shell = True)
         output = np.loadtxt('data.txt', dtype = 'float').T
         Ys.append(np.delete(output, 0, 0))
     X = output[0]
@@ -40,6 +40,6 @@ if __name__ == "__main__":
     ax.plot(X, Y[0], marker = '+', markersize = 7, label = 'kernel')
     ax.plot(X, Y[1], marker = '*', markersize = 3, label = 'user')
     ax.plot(X, Y[2], marker = '^', markersize = 3, label = 'kernel to user')
-    ax.legend(loc = 'upper left')
+    ax.legend(loc='best')
 
     plt.show()

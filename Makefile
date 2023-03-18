@@ -26,10 +26,10 @@ unload:
 	sudo rmmod $(TARGET_MODULE) || true >/dev/null
 
 client: utils/client.c
-	$(CC) -o $@ $^
+	$(CC) -O2 -o $@ $^
 
 measure: utils/measure.c
-	$(CC) -o $@ $^
+	$(CC) -O2 -o $@ $^
 
 PRINTF = env printf
 PASS_COLOR = \e[32;01m
