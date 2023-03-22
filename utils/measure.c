@@ -30,6 +30,9 @@ int main(int argc, char *argv[])
     if (argc > 1)
         impl = atoi(argv[1]);
 
+    if (argc > 2)
+        offset = atoi(argv[2]);
+
     /* Change implementation */
     write(fd, buf, impl);
 
