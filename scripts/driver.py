@@ -26,11 +26,17 @@ def data_processing(data_set, n):
 if __name__ == "__main__":
     Ys = []
     for i in range(runs):
-        comp_proc = subprocess.run('sudo ./measure 4 > data.txt', shell = True)
+        comp_proc = subprocess.run('sudo ./measure 5 100 > data.txt', shell = True)
         output = np.loadtxt('data.txt', dtype = 'float').T
         Ys.append(np.delete(output, 0, 0))
     X = output[0]
     Y = data_processing(Ys, runs)
+
+    # Write to file
+    file = open('data.txt', 'w')
+    for i in range(len(X)):
+        file.write(f'{X[i]} {Y[0][i]} {Y[1][i]} {Y[2][i]}\n')
+    file.close()
 
     fig, ax = plt.subplots(1, 1, sharey = True)
     ax.set_title('perf', fontsize = 16)
